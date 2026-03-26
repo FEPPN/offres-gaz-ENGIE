@@ -299,8 +299,12 @@
     ctaBtn.onclick = () => { 
         if (selectedOffer) {
             trackTool('click_cta_' + selectedOffer.id);
-            // Redirection sur la même page (window.top permet de rediriger la page hôte si l'outil est dans une iframe)
-            window.top.location.href = selectedOffer.url;
+            
+            // On ajoute un petit délai (200ms) pour laisser le temps au postMessage de partir vers le parent GA4
+            setTimeout(() => {
+                // Redirection sur la même page (window.top permet de rediriger la page hôte si l'outil est dans une iframe)
+                window.top.location.href = selectedOffer.url;
+            }, 200);
         }
     };
 
