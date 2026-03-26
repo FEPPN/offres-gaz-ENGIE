@@ -109,6 +109,41 @@
 <script>
     if (typeof lucide !== 'undefined') { lucide.createIcons(); }
 
+    // ==========================================
+    // 1. FONCTION DE TRACKING GA4 (postMessage)
+    // ==========================================
+    function trackTool(actionName) {
+        const nom_du_tool = "offres-gaz-ENGIE";
+        window.parent.postMessage({
+            'event': 'tool_interaction',
+            'tool_name': nom_du_tool, 
+            'tool_action': actionName
+        }, '*');
+        
+        // Console.log utile pour tester en local avant la prod
+        // console.log(`[Tracking] ${nom_du_tool} -> ${actionName}`);
+    }
+
+    // ==========================================
+    // 2. INTERSECTION OBSERVER (Visibilité outil)
+    // ==========================================
+    document.addEventListener("DOMContentLoaded", () => {
+        const toolElement = document.getElementById('papernest-engie-tool');
+        const visibilityObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    trackTool('tool_visible'); // Déclenche l'événement visible
+                    visibilityObserver.disconnect(); // On se déconnecte pour ne pas spammer si le user scrolle de haut en bas
+                }
+            });
+        }, { threshold: 0.35 }); // Se déclenche quand 35% de l'outil est visible à l'écran
+
+        if (toolElement) visibilityObserver.observe(toolElement);
+    });
+
+    // ==========================================
+    // DONNÉES ET LOGIQUE DE L'OUTIL
+    // ==========================================
     const engieOffers = [
         { 
             id: 'gaz-adapt-1an', 
@@ -186,7 +221,15 @@
                 </div>
                 <i data-lucide="check" class="w-4 h-4 hide-element" style="color: ${theme.text}"></i>
             `;
-            item.onclick = (e) => { e.stopPropagation(); selectOffer(offer, item); closeDropdown(); };
+            
+            // FUSION ONCLICK : Tracking du choix de l'offre en premier
+            item.onclick = (e) => { 
+                trackTool('select_offer_' + offer.id); 
+                e.stopPropagation(); 
+                selectOffer(offer, item); 
+                closeDropdown(); 
+            };
+            
             dropdownMenu.appendChild(item);
         });
         lucide.createIcons();
@@ -237,9 +280,28 @@
         lucide.createIcons();
     }
 
-    selectBtn.onclick = (e) => { e.stopPropagation(); toggleDropdown(); };
-    document.onclick = () => closeDropdown();
-    ctaBtn.onclick = () => { if (selectedOffer) window.open(selectedOffer.url, '_blank'); };
+    // FUSION ONCLICK : Tracking de l'ouverture/fermeture via le bouton select
+    selectBtn.onclick = (e) => { 
+        trackTool(isOpen ? 'dropdown_close' : 'dropdown_open');
+        e.stopPropagation(); 
+        toggleDropdown(); 
+    };
+    
+    // FUSION ONCLICK : Tracking si l'utilisateur clique en dehors pour fermer (abandon du choix)
+    document.onclick = () => {
+        if(isOpen) {
+            trackTool('dropdown_close_outside');
+            closeDropdown();
+        }
+    };
+    
+    // FUSION ONCLICK : Tracking du clic sortant (CTA) positionné AVANT le window.open
+    ctaBtn.onclick = () => { 
+        if (selectedOffer) {
+            trackTool('click_cta_' + selectedOffer.id);
+            window.open(selectedOffer.url, '_blank'); 
+        }
+    };
 
     window.onload = () => { renderDropdown(); sendResize(); };
 </script>
